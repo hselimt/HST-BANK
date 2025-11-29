@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 420px;
+            background: #0d0d0d;
+            border: 1px solid #1f1f1f;
+            padding: 40px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00ff88;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #1f1f1f;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: #00ff88;
+            border-bottom-color: #00ff88;
+        }
+
+        .form {
+            display: none;
+        }
+
+        .form.active {
+            display: block;
+        }
+
+        .group {
+            margin-bottom: 20px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid #1f1f1f;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #00ff88;
+            border: none;
+            color: #000;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #00dd77;
+        }
+
+        .msg {
+            padding: 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .msg.error {
+            background: #200000;
+            border: 1px solid #400000;
+            color: #ff4444;
+        }
+
+        .msg.success {
+            background: #002000;
+            border: 1px solid #004000;
+            color: #00ff88;
+        }
+
+        .msg.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">HST BANK</div>
+    <div class="subtitle">Digital Banking Platform</div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">Sign In</div>
+        <div class="tab" onclick="switchTab('register')">Sign Up</div>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <div id="loginForm" class="form active">
+        <form onsubmit="login(event)">
+            <div class="group">
+                <label>Email Address</label>
+                <input type="email" id="email1" required>
+            </div>
+            <div class="group">
+                <label>Password</label>
+                <input type="password" id="pass1" required>
+            </div>
+            <button type="submit" class="btn">Sign In</button>
+        </form>
+    </div>
+
+    <div id="registerForm" class="form">
+        <form onsubmit="register(event)">
+            <div class="row">
+                <div class="group">
+                    <label>First Name</label>
+                    <input type="text" id="fname" required>
+                </div>
+                <div class="group">
+                    <label>Last Name</label>
+                    <input type="text" id="lname" required>
+                </div>
+            </div>
+            <div class="group">
+                <label>Email Address</label>
+                <input type="email" id="email2" required>
+            </div>
+            <div class="group">
+                <label>Password</label>
+                <input type="password" id="pass2" required minlength="6">
+            </div>
+            <button type="submit" class="btn">Create Account</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    if (localStorage.getItem('userId')) {
+        window.location.href = '/dashboard.html';
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+
+        if (tab === 'login') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('loginForm').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('registerForm').classList.add('active');
+        }
+        hideMsg();
+    }
+
+    function showMsg(text, type) {
+        const m = document.getElementById('msg');
+        m.textContent = text;
+        m.className = 'msg ' + type + ' show';
+    }
+
+    function hideMsg() {
+        document.getElementById('msg').className = 'msg';
+    }
+
+    async function login(e) {
+        e.preventDefault();
+        hideMsg();
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('email1').value,
+                    password: document.getElementById('pass1').value
+                })
+            });
+
+            if (!res.ok) throw new Error('Invalid credentials');
+
+            const data = await res.json();
+            localStorage.setItem('userId', data.id);
+            localStorage.setItem('userName', data.firstName + ' ' + data.lastName);
+            window.location.href = '/dashboard.html';
+        } catch (err) {
+            showMsg(err.message, 'error');
+        }
+    }
+
+    async function register(e) {
+        e.preventDefault();
+        hideMsg();
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    firstName: document.getElementById('fname').value,
+                    lastName: document.getElementById('lname').value,
+                    email: document.getElementById('email2').value,
+                    password: document.getElementById('pass2').value
+                })
+            });
+
+            if (!res.ok) throw new Error('Registration failed');
+
+            showMsg('Account created! Please sign in.', 'success');
+            setTimeout(() => {
+                switchTab('login');
+                document.getElementById('email1').value = document.getElementById('email2').value;
+            }, 1500);
+        } catch (err) {
+            showMsg(err.message, 'error');
+        }
+    }
+</script>
+</body>
+</html>

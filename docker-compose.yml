@@ -1,0 +1,27 @@
+services:
+  db:                                    # PostgreSQL container
+    image: postgres:16-alpine            # Use official postgres image
+    environment:
+      POSTGRES_DB: hstbank               # Creates database on first run
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"                       # Host:Container - use 5433 to avoid conflict with local postgres
+    volumes:
+      - hstbank_data:/var/lib/postgresql/data  # Persist data between restarts
+
+  app:                                   # Your Spring Boot app
+    build: .                             # Build using Dockerfile in current directory
+    ports:
+      - "8080:8080"
+    environment:                         # These override application.properties defaults
+      DB_HOST: db                        # "db" = name of postgres service above
+      DB_PORT: 5432
+      DB_NAME: hstbank
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres123
+    depends_on:
+      - db                               # Start db before app
+
+volumes:
+  hstbank_data:                          # Named volume for database persistence
