@@ -7,7 +7,7 @@
   
   <br>
   
-  <img src="HB.gif" alt="HST BANK" width="50%">
+  <img src="HST-BANK.gif" alt="HST BANK" width="100%">
 </div>
 
 ## Features
