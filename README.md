@@ -1,13 +1,12 @@
 <div align="center">
-  <h1>HST Bank</h1>
+  <h1>HST BANK</h1>
   
   <p>
     <b>Bank simulation build with Spring Boot banking REST API and PostgreSQL.</b>
   </p>
-  
-  <br>
-  
-  <img src="HST-BANK.gif" alt="HST BANK" width="100%">
+
+https://github.com/user-attachments/assets/2a3c986c-8c76-4fbe-a84e-81ecc0601f37
+
 </div>
 
 ## Features
@@ -33,11 +32,6 @@
 3. Update `application.properties` with your DB password
 4. Run: `./mvnw spring-boot:run`
 5. Open: `http://localhost:8080/login.html`
-
-## Running with Docker
-```bash
-docker-compose up --build
-```
 
 ## Test Account
 
