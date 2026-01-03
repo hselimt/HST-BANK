@@ -23,7 +23,6 @@ https://github.com/user-attachments/assets/2a3c986c-8c76-4fbe-a84e-81ecc0601f37
 - Spring Boot
 - PostgreSQL
 - Lombok
-- Docker (optional)
 
 ## Running Locally
 
