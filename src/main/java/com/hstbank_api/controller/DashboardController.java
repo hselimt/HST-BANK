@@ -16,7 +16,6 @@ public class DashboardController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<DashboardResponse> getDashboard(@PathVariable Long userId) {
-        // @PathVariable extracts {userId} from URL
         try {
             DashboardResponse dashboard = dashboardService.getUserDashboard(userId);
             return ResponseEntity.ok(dashboard);

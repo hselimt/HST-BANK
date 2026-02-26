@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface CardRepository extends JpaRepository<Card, Long> {
-    // Find all cards belonging to a user
+    // Find all cards belonging to a user and checks status
     // Spring reads the method names and generates SQL automatically
     List<Card> findByUserId(Long userId);
     boolean existsByCardNumber(String cardNumber);

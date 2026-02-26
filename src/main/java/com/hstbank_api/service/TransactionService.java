@@ -1,59 +1,56 @@
 package com.hstbank_api.service;
 
+import com.hstbank_api.dto.TransactionContext;
 import com.hstbank_api.model.Account;
 import com.hstbank_api.model.Transaction;
-import com.hstbank_api.model.TransactionStatus;
+import com.hstbank_api.model.TransactionType;
 import com.hstbank_api.repository.TransactionRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
+    private final Map<TransactionType, AbstractTransactionProcessor> processors;
 
-    @Transactional
+    // Spring injects List of all AbstractTransactionProcessor implementations automatically
+    public TransactionService(TransactionRepository transactionRepository,
+                              AccountService accountService,
+                              List<AbstractTransactionProcessor> processorList) {
+        this.transactionRepository = transactionRepository;
+        this.accountService = accountService;
+        // Build registry: TransactionType -> Processor
+        this.processors = processorList.stream()
+                .collect(Collectors.toMap(
+                        AbstractTransactionProcessor::getSupportedType, // key = type
+                        processor -> processor // value = processor instance
+                ));
+    }
+
+    public Transaction processTransaction(TransactionType type, TransactionContext context) {
+        AbstractTransactionProcessor processor = processors.get(type);
+        if (processor == null) {
+            throw new RuntimeException("Unsupported transaction type: " + type);
+        }
+        return processor.process(context); // dynamic binding - calls correct subclass
+    }
+
     public Transaction transfer(Long fromAccountId, Long toAccountId, BigDecimal amount, String description) {
-        if(amount.compareTo(BigDecimal.ZERO) <= 0){
-            throw new RuntimeException("Transaction amount must be positive");
-        }
+        TransactionContext context = TransactionContext.builder()
+                .fromAccountId(fromAccountId)
+                .toAccountId(toAccountId)
+                .amount(amount)
+                .description(description)
+                .build();
 
-        Account fromAccount = accountService.getAccountById(fromAccountId)
-                .orElseThrow(() -> new RuntimeException("Sender account not found"));
-
-        Account toAccount = accountService.getAccountById(toAccountId)
-                .orElseThrow(() -> new RuntimeException("Receiver account not found"));
-
-        if(fromAccount.getBalance().compareTo(amount) < 0){
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        if (!fromAccount.getCurrency().equals(toAccount.getCurrency())){
-            throw new RuntimeException("Currency mismatch");
-        }
-
-        // These two must both succeed or both fail (@Transactional)
-        accountService.withdraw(fromAccount, amount);
-        accountService.deposit(toAccount, amount);
-
-        Transaction transaction = new Transaction();
-        transaction.setFromAccount(fromAccount);
-        transaction.setToAccount(toAccount);
-        transaction.setAmount(amount);
-        transaction.setCurrency(fromAccount.getCurrency());
-        transaction.setStatus(TransactionStatus.COMPLETED);
-        transaction.setDescription(description);
-        transaction.setCreatedAt(LocalDateTime.now());
-
-        return transactionRepository.save(transaction);
+        return processTransaction(TransactionType.TRANSFER, context);
     }
 
     public List<Transaction> getTransactionHistory(Long accountId) {
@@ -63,9 +60,31 @@ public class TransactionService {
         // Get transactions where user sent or received money
         List<Transaction> sentTransactions = transactionRepository.findByFromAccount(account);
         List<Transaction> receivedTransactions = transactionRepository.findByToAccount(account);
-        sentTransactions.addAll(receivedTransactions); // Merge both lists
+        sentTransactions.addAll(receivedTransactions);
 
-        return sentTransactions;
+        // Remove duplicates (card payments have same from/to)
+        return sentTransactions.stream().distinct().collect(Collectors.toList());
+    }
+
+    // Get transactions filtered by type
+    public List<Transaction> getTransactionsByType(Long accountId, TransactionType type) {
+        Account account = accountService.getAccountById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        List<Transaction> all = getTransactionHistory(accountId);
+        return all.stream()
+                .filter(tx -> tx.getTransactionType() == type)
+                .collect(Collectors.toList());
+    }
+
+    // Get all transactions for a user across all accounts
+    public List<Transaction> getAllUserTransactions(Long userId) {
+        List<Account> accounts = accountService.getAccountsByUserId(userId);
+        return accounts.stream()
+                .flatMap(account -> getTransactionHistory(account.getId()).stream())
+                .distinct()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt())) // newest first
+                .collect(Collectors.toList());
     }
 
     public Optional<Transaction> getTransactionById(Long id) {

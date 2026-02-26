@@ -5,9 +5,9 @@
     <b>Bank simulation build with Spring Boot banking REST API and PostgreSQL.</b>
   </p>
 
-https://github.com/user-attachments/assets/2a3c986c-8c76-4fbe-a84e-81ecc0601f37
 
 ## Architecture
+
 ```mermaid
 classDiagram
 
@@ -37,14 +37,27 @@ classDiagram
 
     class CardController {
         -CardService cardService
+        -UserService userService
         +createCard(CardRequest) ResponseEntity
+        +makePayment(Long, BigDecimal) ResponseEntity
     }
 
     class TransferController {
         -TransactionService transactionService
+        -AccountService accountService
         +transfer(TransferRequest) ResponseEntity
+        +externalTransfer(ExternalTransferRequest) ResponseEntity
         +getTransactionHistory(Long) ResponseEntity~List~TransactionResponse~~
-        +getTransaction(Long) ResponseEntity~TransactionResponse~
+        +getUserTransactions(Long) ResponseEntity~List~TransactionResponse~~
+        +getTransactionsByType(Long, TransactionType) ResponseEntity~List~TransactionResponse~~
+    }
+
+    class ExchangeController {
+        -ExchangeService exchangeService
+        -ExchangeRateProvider exchangeRateProvider
+        +getRates(String) ResponseEntity~ExchangeRateResponse~
+        +getRate(String, String) ResponseEntity
+        +exchange(ExchangeRequest) ResponseEntity~TransactionResponse~
     }
 
     class DashboardController {
@@ -70,30 +83,88 @@ classDiagram
         +getAccountById(Long) Optional~Account~
         +getAccountByAccountNumber(String) Optional~Account~
         +getAccountsByUser(User) List~Account~
+        +getAccountsByUserId(Long) List~Account~
     }
 
     class CardService {
         -CardRepository cardRepository
         -UserRepository userRepository
         -AccountRepository accountRepository
+        -TransactionService transactionService
         +createCard(Long, CardRequest) Card
         +getUserCards(Long) List~Card~
-        +deleteCard(Long) void
+        +makeCardPayment(Long, BigDecimal, String) void
     }
 
     class TransactionService {
         -TransactionRepository transactionRepository
         -AccountService accountService
+        -Map~TransactionType, AbstractTransactionProcessor~ processorRegistry
         +transfer(Long, Long, BigDecimal, String) Transaction
+        +processTransaction(TransactionType, TransactionContext) Transaction
         +getTransactionHistory(Long) List~Transaction~
-        +getTransactionById(Long) Optional~Transaction~
+        +getAllUserTransactions(Long) List~Transaction~
+        +getTransactionsByType(Long, TransactionType) List~Transaction~
     }
 
     class DashboardService {
         -UserRepository userRepository
         -AccountRepository accountRepository
         -CardRepository cardRepository
+        -TransactionService transactionService
+        -ExchangeRateProvider exchangeRateProvider
         +getUserDashboard(Long) DashboardResponse
+    }
+
+    class ExchangeService {
+        -ExchangeRateProvider exchangeRateProvider
+        -TransactionService transactionService
+        +exchange(Long, Long, BigDecimal) Transaction
+    }
+
+    %% ============ INTERFACE ============
+    class ExchangeRateProvider {
+        <<interface>>
+        +getRate(String, String) BigDecimal
+        +getAllRates(String) Map~String, BigDecimal~
+    }
+
+    class LiveExchangeRateProvider {
+        -RestTemplate restTemplate
+        -ConcurrentHashMap cache
+        +getRate(String, String) BigDecimal
+        +getAllRates(String) Map~String, BigDecimal~
+        -getFallbackRates(String) Map~String, BigDecimal~
+    }
+
+    %% ============ ABSTRACT CLASS + PROCESSORS ============
+    class AbstractTransactionProcessor {
+        <<abstract>>
+        #AccountService accountService
+        #TransactionRepository transactionRepository
+        +process(TransactionContext) Transaction
+        #validate(TransactionContext) void
+        #execute(TransactionContext)* Transaction
+        +getSupportedType()* TransactionType
+    }
+
+    class TransferProcessor {
+        #validate(TransactionContext) void
+        #execute(TransactionContext) Transaction
+        +getSupportedType() TransactionType
+    }
+
+    class ExchangeProcessor {
+        -ExchangeRateProvider exchangeRateProvider
+        #validate(TransactionContext) void
+        #execute(TransactionContext) Transaction
+        +getSupportedType() TransactionType
+    }
+
+    class CardTransactionProcessor {
+        #validate(TransactionContext) void
+        #execute(TransactionContext) Transaction
+        +getSupportedType() TransactionType
     }
 
     %% ============ REPOSITORY LAYER ============
@@ -103,7 +174,6 @@ classDiagram
         +findById(ID id) Optional~T~
         +findAll() List~T~
         +deleteById(ID id) void
-        +existsById(ID id) boolean
     }
 
     class UserRepository {
@@ -116,6 +186,7 @@ classDiagram
         +findByUser(User) List~Account~
         +findByUserId(Long) List~Account~
         +findByAccountNumber(String) Optional~Account~
+        +findByUserIdAndCurrency(Long, String) List~Account~
     }
 
     class CardRepository {
@@ -131,6 +202,8 @@ classDiagram
         <<interface>>
         +findByFromAccount(Account) List~Transaction~
         +findByToAccount(Account) List~Transaction~
+        +findByFromAccountOrToAccountOrderByCreatedAtDesc(Account, Account) List~Transaction~
+        +findByTransactionType(TransactionType) List~Transaction~
     }
 
     %% ============ ENTITY LAYER ============
@@ -166,7 +239,6 @@ classDiagram
         -boolean isActive
         -User user
         -Account account
-        +setDefaultExpireDate() void
     }
 
     class Transaction {
@@ -176,7 +248,11 @@ classDiagram
         -BigDecimal amount
         -String currency
         -TransactionStatus status
+        -TransactionType transactionType
         -String description
+        -BigDecimal exchangeRate
+        -String targetCurrency
+        -BigDecimal targetAmount
         -LocalDateTime createdAt
     }
 
@@ -206,6 +282,13 @@ classDiagram
         COMPLETED
         FAILED
         CANCELLED
+    }
+
+    class TransactionType {
+        <<enumeration>>
+        TRANSFER
+        EXCHANGE
+        CARD_PAYMENT
     }
 
     %% ============ REQUEST DTOs ============
@@ -245,6 +328,27 @@ classDiagram
         -String description
     }
 
+    class ExternalTransferRequest {
+        -Long fromAccountId
+        -String toAccountNumber
+        -BigDecimal amount
+        -String description
+    }
+
+    class ExchangeRequest {
+        -Long fromAccountId
+        -Long toAccountId
+        -BigDecimal amount
+    }
+
+    class TransactionContext {
+        -Long fromAccountId
+        -Long toAccountId
+        -BigDecimal amount
+        -String description
+        -TransactionType transactionType
+    }
+
     %% ============ RESPONSE DTOs ============
     class UserResponse {
         -Long id
@@ -273,8 +377,13 @@ classDiagram
     class CardResponse {
         -Long id
         -Long userId
+        -String cardNumber
+        -String cardHolderName
         -CardType cardType
+        -CardBrand cardBrand
         -BigDecimal cardBalance
+        -BigDecimal creditLimit
+        -Long linkedAccountId
     }
 
     class TransactionResponse {
@@ -284,16 +393,28 @@ classDiagram
         -LocalDateTime transactionDate
         -Long fromAccountId
         -Long toAccountId
+        -String currency
+        -TransactionType transactionType
+        -BigDecimal exchangeRate
+        -String targetCurrency
+        -BigDecimal targetAmount
+    }
+
+    class ExchangeRateResponse {
+        -String base
+        -Map~String, BigDecimal~ rates
     }
 
     class DashboardResponse {
         -String userName
         -int totalAccounts
         -int totalCards
-        -BigDecimal totalBalance
+        -Map~String, BigDecimal~ balanceByCurrency
         -BigDecimal totalCreditAvailable
-        -List~Account~ accounts
-        -List~Card~ cards
+        -List~AccountResponse~ accounts
+        -List~CardResponse~ cards
+        -List~TransactionResponse~ recentTransactions
+        -Map~String, BigDecimal~ exchangeRates
     }
 
     %% ============ STARTUP DEPENDENCIES ============
@@ -305,7 +426,11 @@ classDiagram
     AccountController --> AccountService
     AccountController --> UserService
     CardController --> CardService
+    CardController --> UserService
     TransferController --> TransactionService
+    TransferController --> AccountService
+    ExchangeController --> ExchangeService
+    ExchangeController --> ExchangeRateProvider
     DashboardController --> DashboardService
 
     %% ============ SERVICE -> REPOSITORY ============
@@ -314,11 +439,30 @@ classDiagram
     CardService --> CardRepository
     CardService --> UserRepository
     CardService --> AccountRepository
+    CardService --> TransactionService
     TransactionService --> TransactionRepository
     TransactionService --> AccountService
     DashboardService --> UserRepository
     DashboardService --> AccountRepository
     DashboardService --> CardRepository
+    DashboardService --> TransactionService
+    DashboardService --> ExchangeRateProvider
+    ExchangeService --> ExchangeRateProvider
+    ExchangeService --> TransactionService
+
+    %% ============ INTERFACE IMPLEMENTATION ============
+    LiveExchangeRateProvider ..|> ExchangeRateProvider
+
+    %% ============ INHERITANCE (Abstract -> Concrete) ============
+    TransferProcessor --|> AbstractTransactionProcessor
+    ExchangeProcessor --|> AbstractTransactionProcessor
+    CardTransactionProcessor --|> AbstractTransactionProcessor
+
+    %% ============ POLYMORPHIC DISPATCH ============
+    TransactionService --> AbstractTransactionProcessor : processorRegistry
+
+    %% ============ PROCESSOR DEPENDENCIES ============
+    ExchangeProcessor --> ExchangeRateProvider
 
     %% ============ REPOSITORY INHERITANCE ============
     UserRepository --|> JpaRepository~T, ID~
@@ -344,6 +488,7 @@ classDiagram
     Card --> CardType
     Card --> CardBrand
     Transaction --> TransactionStatus
+    Transaction --> TransactionType
 
     %% ============ DTO -> ENUM ============
     CreateAccountRequest --> AccountType
@@ -351,35 +496,37 @@ classDiagram
     CardRequest --> CardType
     CardRequest --> CardBrand
     CardResponse --> CardType
+    CardResponse --> CardBrand
+    TransactionResponse --> TransactionType
 ```
-
 </div>
 
 ## Features
-
 - User registration/login
-- Account management (checking/savings)
+- Account management (checking/savings, multi-currency: TRY, USD, EUR, GBP)
 - Money transfers with ACID transactions
-- Card management (credit/debit)
-- Transaction history
+- Cross-user transfers via IBAN
+- Live exchange rates (frankfurter.app API with caching and fallback)
+- Currency exchange between accounts
+- Card management (credit/debit) with card payments
+- Unified transaction history with type filtering
+- Per-currency balance display on dashboard
 
 ## Tech Stack
-
 - Java 17
 - Spring Boot
 - PostgreSQL
 - Lombok
+- RestTemplate (frankfurter.app API integration)
 
 ## Running Locally
-
 1. Install Java 17 and PostgreSQL
 2. Create database: `hstbank`
 3. Update `application.properties` with your DB password
 4. Run: `./mvnw spring-boot:run`
-5. Open: `http://localhost:8080/login.html`
+5. Open: http://localhost:8080/login.html
 
 ## Test Account
-
 - Email: `admin@hstbank.com`
 - Password: `admin123`
 
@@ -392,5 +539,12 @@ classDiagram
 | GET | /api/dashboard/user/{id} | Get dashboard |
 | POST | /api/accounts | Create account |
 | POST | /api/cards | Create card |
+| POST | /api/cards/{cardId}/payment | Card payment |
 | POST | /api/transfers | Transfer money |
-| GET | /api/transfers/history/{accountId} | Transaction history |
+| POST | /api/transfers/external | Transfer via IBAN |
+| GET | /api/transfers/history/{accountId} | Account transactions |
+| GET | /api/transfers/user/{userId} | All user transactions |
+| GET | /api/transfers/history/{accountId}/type/{type} | Filter by type |
+| GET | /api/exchange/rates?base=TRY | Get exchange rates |
+| GET | /api/exchange/rate?from=X&to=Y | Get single rate |
+| POST | /api/exchange | Exchange currency |

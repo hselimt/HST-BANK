@@ -20,7 +20,7 @@ public class UserService {
 
         User user = new User();
         user.setEmail(email.trim());
-        user.setPassword(password); // Plain text - use BCrypt for production
+        user.setPassword(password); // Plain text
         user.setFirstName(firstName.toUpperCase());
         user.setLastName(lastName.toUpperCase());
         user.setCreatedAt(LocalDateTime.now());
@@ -41,7 +41,6 @@ public class UserService {
             throw new RuntimeException("Password must be at least 8 characters long");
         }
 
-        // .matches() = regex check
         boolean hasLetter = password.matches(".*[a-zA-Z]+.*");
         boolean hasDigit = password.matches(".*\\d+.*");
 
@@ -58,16 +57,15 @@ public class UserService {
         }
     }
 
-    // Optional = nullable
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
     public List<User> getAllUsers() {
-        return userRepository.findAll(); // Built-in JPA method
+        return userRepository.findAll();
     }
 
     public Optional<User> findById(Long id) {
-        return userRepository.findById(id); // Built-in JPA method
+        return userRepository.findById(id);
     }
 }

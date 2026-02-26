@@ -26,9 +26,6 @@ public class AuthController {
                 request.getLastName()
         );
 
-        // Entity = class mapped to database table, has hidden Hibernate stuff attached
-        // DTO = plain data object, safe to send as JSON response
-        // Never return entity directly - causes serialization errors
         UserResponse response = new UserResponse(
                 user.getId(),
                 user.getEmail(),

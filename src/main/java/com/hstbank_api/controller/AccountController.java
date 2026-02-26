@@ -22,7 +22,6 @@ public class AccountController {
 
     @PostMapping
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request) {
-        // <?> = can return any type
         try {
             User user = userService.findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));

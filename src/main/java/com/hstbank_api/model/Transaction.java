@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,6 +36,20 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TransactionType transactionType = TransactionType.TRANSFER;
+
+    // Exchange-specific fields (nullable for non-exchange transactions)
+    @Column(precision = 19, scale = 6)
+    private BigDecimal exchangeRate;
+
+    @Column(length = 3)
+    private String targetCurrency;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal targetAmount;
 
     @Column(length = 500)
     private String description;

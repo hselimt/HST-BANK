@@ -67,6 +67,10 @@ public class AccountService {
         return accountRepository.findByUser(user);
     }
 
+    public List<Account> getAccountsByUserId(Long userId) {
+        return accountRepository.findByUserId(userId);
+    }
+
     public Optional<Account> getAccountById(Long id) {
         return accountRepository.findById(id);
     }
