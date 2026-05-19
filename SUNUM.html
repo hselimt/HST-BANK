@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HST BANK</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-main: #f5f5f5;
+            --text-muted: #a3a3a3;
+            --border-color: #262626;
+            --card-bg: #121212;
+            --accent-bg: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 50px 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        /* Tüm elementlerde kalın yazıyı sıfırlama */
+        h1, h2, h3, h4, h5, h6, th, td, p, li, blockquote, code {
+            font-weight: normal;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-top: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #e5e5e5;
+        }
+
+        p {
+            margin-bottom: 1.25rem;
+            color: var(--text-muted);
+        }
+
+        ul {
+            margin-bottom: 1.5rem;
+            padding-left: 20px;
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 3rem 0;
+        }
+
+        blockquote {
+            background: var(--accent-bg);
+            border-left: 2px solid #525252;
+            margin: 2rem 0;
+            padding: 20px 25px;
+            border-radius: 4px;
+        }
+
+        blockquote p {
+            margin: 0;
+            color: #d4d4d4;
+        }
+
+        pre {
+            background: #000000;
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #a3a3a3;
+            font-family: "Fira Code", Consolas, monospace;
+            line-height: 1.4;
+        }
+
+        code {
+            background: var(--accent-bg);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: "Fira Code", Consolas, monospace;
+            font-size: 0.9em;
+            color: #e5e5e5;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--accent-bg);
+            color: #ffffff;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .badge-img {
+            vertical-align: middle;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-center">
+            <h1>HST BANK</h1>
+            <p>Gerçek bir bankanın temel işlevlerini simüle eden backend API'si. Amaç; bankacılık işlemlerini yazılım olarak modellemek ve temel backend kavramlarını uygulamalı göstermektir.</p>
+        </div>
+
+        <hr>
+
+        <h2>Özellikler</h2>
+        <ul>
+            <li>Validasyonlu kullanıcı kayıt ve giriş sistemi (e-posta formatı, şifre uzunluğu ve içerik kontrolü, ad/soyad uzunluk kontrolü)</li>
+            <li>Birden fazla hesap türü (Checkings, Savings) ve para birimi (TRY, USD, EUR, GBP) desteğiyle banka hesabı oluşturma</li>
+            <li>Bakiye ve para birimi kontrolüyle hesaplar arası para transferi</li>
+            <li>IBAN ile diğer kullanıcılara ACID uyumlu transfer</li>
+        </ul>
+
+        <blockquote>
+            <p>💡 ACID Nedir?<br>İşlemler zincirleme gerçekleşir. Zincirin bir halkası koparsa tüm işlem geri alınır (rollback)</p>
+        </blockquote>
+
+        <ul>
+            <li>Harici kur API'sinden canlı döviz kuru çekme harici olarak kur tutan cache + fallback mekanizmaları</li>
+            <li>Gerçek zamanlı kurlarla exchange işlemleri</li>
+            <li>Banka kartı ve kredi kartı yönetimi</li>
+            <li>Transaction geçmişi ve işlem türüne göre filtreleme</li>
+            <li>Tüm finansal veriyi tek seferde döndüren dashboard endpoint'i</li>
+        </ul>
+
+        <hr>
+
+        <h2>Mimari</h2>
+        <p>RESTful API Mimarisi — Client ile server arasındaki iletişimin HTTP methodları (<code>GET, POST, PUT, DELETE</code>) üzerinden, belirli kurallara göre yapıldığı bir tasarım yaklaşımıdır.</p>
+        <p>Katmanlar birbirine Dependency Injection ile bağlanır, Spring gerekli bağımlılıkları otomatik olarak sağlar.</p>
+
+        <div class="text-center">
+<pre>
+┌─────────────────────────────────────────────────────────────────────┐
+│  🔵  CONTROLLER KATMANI  │  Dış dünyadan gelen istekleri karşılar  │
+├─────────────────────────────────────────────────────────────────────┤
+│  🟡  SERVICE KATMANI     │  Tüm iş mantığı burada çalışır          │
+├─────────────────────────────────────────────────────────────────────┤
+│  🟢  REPOSITORY KATMANI  │  Database ile konuşan tek katman        │
+└─────────────────────────────────────────────────────────────────────┘
+</pre>
+        </div>
+
+        <h3>🔵 Controller Katmanı</h3>
+        <p>Uygulamanın dış dünyayla konuştuğu noktadır. Gelen isteği karşılar, Service katmanına iletir ve sonucu HTTP status olarak döndürür.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Bazı Status Kodları</th>
+                    <th>Anlam</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>200</code></td>
+                    <td>İşlem başarılı</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>400</code></td>
+                    <td>İstek hatalı</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>403</code></td>
+                    <td>Kullanıcı authorize edilmemiş</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>404</code></td>
+                    <td>Kaynak bulunamadı</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>500</code></td>
+                    <td>Sunucu çöktü</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>🟡 Service Katmanı</h3>
+        <p>Tüm iş mantığının yürütüldüğü ve kuralların tanımlandığı yerdir.<br>"Bakiye yeterli mi?" — "Para birimleri uyuşuyor mu?" — "Bu e-posta kayıtlı mı?" gibi tüm kontroller burada yapılır.</p>
+
+        <h3>🟢 Repository Katmanı</h3>
+        <p>Database ile konuşan tek katmandır. Database işlemleri Repository katmanı üzerinden geçer.</p>
+
+        <hr>
+
+        <h2>Kullanılan Teknolojiler</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Teknoloji</th>
+                    <th>Ne İşe Yarar?</th>
+                    <th>Neden Tercih Edildi?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=flat&logo=spring&logoColor=white" alt="Spring" class="badge-img"></td>
+                    <td>Java framework'ü</td>
+                    <td>server, database bağlantısı gibi konfigürasyonları otomatik halleder</td>
+                </tr>
+                <tr>
+                    <td><img src="https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL" class="badge-img"></td>
+                    <td>Relational(İlişkisel) Database</td>
+                    <td>ACID garantisiyle finansal işlemlerde veri tutarlılığını sağlar</td>
+                </tr>
+                <tr>
+                    <td>Spring Data JPA</td>
+                    <td>ORM(Object to Relational Mapping)</td>
+                    <td>Java sınıflarını DB tablolarına eşler; SQL yazmak yerine Java metod isimleri kullanılır</td>
+                </tr>
+                <tr>
+                    <td>Lombok</td>
+                    <td>Kod üretici</td>
+                    <td>Getter, setter, constructor gibi tekrarlayan kodları otomatik oluşturur</td>
+                </tr>
+                <tr>
+                    <td>RestTemplate</td>
+                    <td>HTTP client</td>
+                    <td>Harici döviz kuru API'sine istek atmak için kullanılır</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <div class="text-center">
+            <h2>API Endpoint Listesi</h2>
+            <p>Uygulamanın dışarıya açık kapılarıdır. <code>POST</code> veri gönderir, <code>GET</code> veri okur</p>
+        </div>
+
+        <hr>
+
+        <h3>Auth</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/auth/register</code></td>
+                    <td>Yeni kullanıcı kaydı</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/auth/login</code></td>
+                    <td>Kullanıcı girişi</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h3>Hesap</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/accounts</code></td>
+                    <td>Banka hesabı oluşturur</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h3>Transfer</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/transfers</code></td>
+                    <td>İki hesap arasında para transferi</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/transfers/external</code></td>
+                    <td>IBAN ile başka kullanıcıya transfer</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/transfers/history/{id}</code></td>
+                    <td>Hesaba ait işlem geçmişi</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/transfers/user/{id}</code></td>
+                    <td>Kullanıcının tüm işlemleri</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/transfers/history/{id}/type/{tip}</code></td>
+                    <td>İşlemleri türe göre filtreler</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h3>Kart</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/cards</code></td>
+                    <td>Debit veya kredi kartı oluşturur</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/cards/{id}/payment</code></td>
+                    <td>Kartla ödeme yapar</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h3>Döviz</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/exchange/rates</code></td>
+                    <td>Tüm döviz kurlarını listeler</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/exchange/rate</code></td>
+                    <td>İki para birimi arasındaki kuru verir</td>
+                </tr>
+                <tr>
+                    <td class="text-center"><code>POST</code></td>
+                    <td><code>/api/exchange</code></td>
+                    <td>Hesaplar arası döviz bozdurma</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h3>Dashboard</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">Metod</th>
+                    <th>Endpoint</th>
+                    <th>Ne Yapar?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center"><code>GET</code></td>
+                    <td><code>/api/dashboard/user/{id}</code></td>
+                    <td>Kullanıcının tüm finansal özetini döner</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
